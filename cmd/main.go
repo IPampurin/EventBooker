@@ -7,8 +7,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	rabbit "github.com/IPampurin/EventBooker/pkg/broker"
 	"github.com/IPampurin/EventBooker/pkg/configuration"
 	"github.com/IPampurin/EventBooker/pkg/db"
+	"github.com/IPampurin/EventBooker/pkg/redis"
 	"github.com/IPampurin/EventBooker/pkg/server"
 	"github.com/wb-go/wbf/logger"
 )
@@ -48,9 +50,19 @@ func main() {
 	}
 	defer func() { _ = db.CloseDB(storageDB) }()
 
-	// получаем broker,error (структура паблишер RabbitMQ и консумер RabbitMQ)
-
 	// получаем экземпляр zSet, error (Redis просто реализует положить-отдать для использования методов в сервисном слое)
+	overdueCh, err := redis.InitRedis(ctx, &cfg.ZSet, appLogger)
+	if err != nil {
+		appLogger.Error("ошибка инициализации Redis", "error", err)
+		return
+	}
+
+	// получаем broker,error (структура паблишер RabbitMQ и консумер RabbitMQ)
+	broker, err := rabbit.InitMQ(ctx, &cfg.Broker, appLogger)
+	if err != nil {
+		appLogger.Error("ошибка подключения к брокеру сообщений", "error", err)
+		return
+	}
 
 	// заводим канал transferOverBookings для передачи номеров броней (из горутины получения просроченных броней из RabbitMQ в сервисный слой для отмены брони)
 
