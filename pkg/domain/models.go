@@ -6,10 +6,10 @@ import "time"
 type Event struct {
 	ID                int       // id события
 	Name              string    // название события
-	Time              time.Time // время проведения события
+	DateEvent         time.Time // время проведения события
 	BookingTTLMinutes int       // время в минутах, на которое можно сделать бронь
 	TotalSeats        int       // количество мест всего
-	AvailableSeats    int       // количество свободных мест
+	FreeSeats         int       // количество свободных мест
 	BookedSeats       int       // количество забронированных мест (активных броней)
 	BookingPrice      int       // стоимость, которую надо внести при бронировании (если 0, то предоплата не требуется)
 }
@@ -35,5 +35,5 @@ type Booking struct {
 	Status      string     // статус: pending, confirmed, cancelled
 	CreatedAt   time.Time  // время создания брони
 	ExpiresAt   time.Time  // время, до которого нужно подтвердить (для pending)
-	ConfirmedAt *time.Time // время подтверждения (nil, если ещё не подтверждено)
+	ConfirmedAt *time.Time // время подтверждения оплатой (nil, если ещё не подтверждено)
 }

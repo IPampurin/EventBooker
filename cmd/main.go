@@ -29,7 +29,7 @@ func main() {
 	// настраиваем логгер
 	appLogger, err := logger.InitLogger(
 		logger.ZapEngine,
-		"ImageProcessor",
+		"EventBooker",
 		os.Getenv("APP_ENV"), // пока оставим пустым
 		logger.WithLevel(logger.InfoLevel),
 	)
@@ -46,13 +46,13 @@ func main() {
 	}
 	defer func() { _ = db.CloseDB(storageDB) }()
 
-	// получаем паблишер RabbitMQ, консумер RabbitMQ, error
+	// получаем broker,error (структура паблишер RabbitMQ и консумер RabbitMQ)
 
-	// получаем экземпляр Redis, error (просто реализует положить-отдать для использования методов в сервисном слое)
+	// получаем экземпляр zSet, error (Redis просто реализует положить-отдать для использования методов в сервисном слое)
 
-	// заводим канал для передачи номеров броней (из горутины получения просроченных броней из RabbitMQ в сервисный слой)
+	// заводим канал transferOverBookings для передачи номеров броней (из горутины получения просроченных броней из RabbitMQ в сервисный слой для отмены брони)
 
-	// получаем экземпляр слоя бизнес-логики
+	// получаем экземпляр слоя бизнес-логики (передаём storageDB, zSet, broker, transferOverBookings)
 
 	// запускаем горутину получения из Redis просроченных броней (передаём паблишер RabbitMQ)
 
