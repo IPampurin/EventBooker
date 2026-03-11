@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/IPampurin/EventBooker/pkg/config"
+	"github.com/IPampurin/EventBooker/pkg/configuration"
 	"github.com/IPampurin/EventBooker/pkg/db"
 	"github.com/IPampurin/EventBooker/pkg/server"
 	"github.com/wb-go/wbf/logger"
@@ -23,7 +23,7 @@ func main() {
 	go signalHandler(ctx, cancel)
 
 	// считываем .env файл
-	cfg, err := config.ReadConfig()
+	cfg, err := configuration.ReadConfig()
 	if err != nil {
 		log.Fatalf("Ошибка загрузки конфигурации: %v", err)
 	}

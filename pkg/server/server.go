@@ -7,14 +7,14 @@ import (
 	"time"
 
 	"github.com/IPampurin/EventBooker/pkg/api"
-	"github.com/IPampurin/EventBooker/pkg/config"
+	"github.com/IPampurin/EventBooker/pkg/configuration"
 	"github.com/IPampurin/EventBooker/pkg/service"
 	"github.com/gin-gonic/gin"
 	"github.com/wb-go/wbf/ginext"
 	"github.com/wb-go/wbf/logger"
 )
 
-func Run(ctx context.Context, cfgServer *config.ConfServer, svc *service.Service, log logger.Logger) error {
+func Run(ctx context.Context, cfgServer *configuration.ConfServer, svc *service.Service, log logger.Logger) error {
 
 	// создаём движок Gin через обёртку ginext
 	engine := ginext.New(cfgServer.GinMode)

@@ -7,34 +7,32 @@ import (
 
 const (
 	eventsSchema = `CREATE TABLE IF NOT EXISTS events (
-			            id INT PRIMARY KEY,
+			            id SERIAL PRIMARY KEY,
 			          name TEXT NOT NULL,
 				date_event TIMESTAMPTZ NOT NULL,
-	   booking_TTL_minutes INT,
-	            totalSeats INT NOT NULL,
-	             freeSeats INT,
-	          bookingPrice INT;
+	   booking_ttl_minutes INT NOT NULL,
+	           total_seats INT NOT NULL,
+	            free_seats INT NOT NULL,
+	         booking_price INT NOT NULL);
 
-	                CREATE INDEX IF NOT EXISTS idx_events_id ON events(id);
 	                CREATE INDEX IF NOT EXISTS idx_events_date_event ON events(date_event DESC);`
 
 	usersSchema = `CREATE TABLE IF NOT EXISTS users (
-			           id INT PRIMARY KEY,
+			           id SERIAL PRIMARY KEY,
                      name TEXT,
 					email TEXT NOT NULL);
 		
 	               CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);`
 
 	bookingsSchema = `CREATE TABLE IF NOT EXISTS bookings (
-			              id UUID PRIMARY KEY,
-					event_id int REFERENCES events(id),
-					users_id int REFERENCES users(id),
+			              id SERIAL PRIMARY KEY,
+					event_id INT REFERENCES events(id),
+					 user_id INT REFERENCES users(id),
 					  status VARCHAR(9),
-				  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-				  expires_at TIMESTAMPTZ NOT NULL
+				  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+				  expires_at TIMESTAMPTZ NOT NULL,
 				confirmed_at TIMESTAMPTZ);
 		
-	                  CREATE INDEX IF NOT EXISTS idx_bookings_id ON bookings(id);
 	                  CREATE INDEX IF NOT EXISTS idx_bookings_created_at ON bookings(created_at DESC);`
 )
 

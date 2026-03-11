@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/IPampurin/EventBooker/pkg/configuration"
 	pgxdriver "github.com/wb-go/wbf/dbpg/pgx-driver"
 	"github.com/wb-go/wbf/logger"
 )
@@ -14,7 +15,7 @@ type DataBase struct {
 }
 
 // InitDB инициализирует подключение к PostgreSQL и применяет миграции
-func InitDB(ctx context.Context, cfgDb *config.ConfDB, log logger.Logger) (*DataBase, error) {
+func InitDB(ctx context.Context, cfgDb *configuration.ConfDB, log logger.Logger) (*DataBase, error) {
 
 	// формируем DSN из конфигурации
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
