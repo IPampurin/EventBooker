@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/IPampurin/EventBooker/pkg/config"
+	"github.com/IPampurin/EventBooker/pkg/db"
 	"github.com/IPampurin/EventBooker/pkg/server"
 	"github.com/wb-go/wbf/logger"
 )

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/IPampurin/EventBooker/pkg/config"
 	pgxdriver "github.com/wb-go/wbf/dbpg/pgx-driver"
 	"github.com/wb-go/wbf/logger"
 )
