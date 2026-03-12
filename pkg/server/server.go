@@ -38,6 +38,8 @@ func Run(ctx context.Context, cfgServer *configuration.ConfServer, svc *service.
 	engine.POST("/events/:id/confirm", api.ConfirmReserve(svc, log)) // оплата брони (если мероприятие требует этого)
 	engine.GET("/events/:id", api.GetEventByID(svc, log))            // получение информации о мероприятии и свободных местах
 	engine.POST("/register", api.RegisterUser(svc, log))             // регистрация пользователя
+	engine.POST("/login", api.LoginUser(svc, log))                   // вход юзера
+	engine.GET("/events/:id/book", api.GetUserBooking(svc, log))     // есть ли бронь у юзера
 
 	// раздаём статические файлы из папки ./web
 	engine.Static("/static", "./web")

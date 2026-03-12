@@ -56,6 +56,10 @@ func (s *Service) SeatReserver(ctx context.Context, eventID, userID int, created
 	if err != nil {
 		return 0, fmt.Errorf("ошибка получения события: %w", err)
 	}
+	// проверяем, что мероприятие ещё не началось
+	if event.DateEvent.Before(time.Now()) {
+		return 0, fmt.Errorf("мероприятие уже началось или завершилось")
+	}
 	expiresAt := createdAt.Add(time.Duration(event.BookingTTLMinutes) * time.Minute)
 
 	// бронируем место в БД
@@ -67,7 +71,12 @@ func (s *Service) SeatReserver(ctx context.Context, eventID, userID int, created
 	// добавляем запись в ZSet для отслеживания просрочки
 	if err := s.zSet.ZAdd(ctx, float64(expiresAt.Unix()), bookingID); err != nil {
 		log.Error("не удалось добавить бронь в ZSet", "id", bookingID, "error", err)
-		// не откатываем бронь, но логируем
+		// компенсация - отменяем созданную бронь в БД
+		if cancelErr := s.storage.CancelBooking(ctx, bookingID); cancelErr != nil {
+			log.Error("критическая ошибка: не удалось откатить бронь после неудачного добавления в Redis",
+				"booking_id", bookingID, "cancel_error", cancelErr)
+		}
+		return 0, fmt.Errorf("бронь создана, но не зарегистрирована в системе отслеживания: %w", err)
 	}
 
 	log.Info("бронь создана", "id", bookingID, "event_id", eventID, "user_id", userID)
@@ -129,12 +138,39 @@ func (s *Service) CancelBooking(ctx context.Context, bookingID int, log logger.L
 // RegisterUser - метод для регистрации пользователя
 func (s *Service) RegisterUser(ctx context.Context, name, email string, log logger.Logger) (int, error) {
 
+	// проверяем, не занят ли email
+	existing, err := s.storage.GetUserByEmail(ctx, email)
+	if err != nil {
+		return 0, fmt.Errorf("ошибка проверки email: %w", err)
+	}
+
+	if existing != 0 {
+		return 0, fmt.Errorf("пользователь с таким email уже существует")
+	}
+
 	id, err := s.storage.RegisterUser(ctx, name, email)
 	if err != nil {
-		return 0, fmt.Errorf("ошибка регистрации пользователя: %w", err)
+		return 0, fmt.Errorf("ошибка регистрации: %w", err)
 	}
 
 	log.Info("пользователь зарегистрирован", "id", id, "email", email)
+
+	return id, nil
+}
+
+// LoginUser проверяет наличие пользователя с указанным email и возвращает его ID
+func (s *Service) LoginUser(ctx context.Context, email string, log logger.Logger) (int, error) {
+
+	id, err := s.storage.GetUserByEmail(ctx, email)
+	if err != nil {
+		return 0, fmt.Errorf("ошибка входа: %w", err)
+	}
+
+	if id == 0 {
+		return 0, nil // пользователь не найден
+	}
+
+	log.Info("пользователь вошёл", "id", id)
 
 	return id, nil
 }

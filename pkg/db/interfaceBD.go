@@ -48,4 +48,7 @@ type UsersTableMethods interface {
 
 	// RegisterUser - метод для регистрации пользователя
 	RegisterUser(ctx context.Context, name, email string) (int, error)
+
+	// GetUserByEmail - возвращает пользователя по email
+	GetUserByEmail(ctx context.Context, email string) (int, error)
 }

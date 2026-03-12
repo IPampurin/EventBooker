@@ -26,3 +26,8 @@ type registerRequest struct {
 	Name  string `json:"name" binding:"required"`
 	Email string `json:"email" binding:"required,email"`
 }
+
+// loginRequest тело запроса для входа
+type loginRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}

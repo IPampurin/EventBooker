@@ -182,7 +182,7 @@ func (d *DataBase) ReserveConfirmer(ctx context.Context, bookingID int) error {
 
 	query := `UPDATE bookings
 	             SET status = $1, confirmed_at = NOW()
-	           WHERE id = $2 AND status = $3`
+	           WHERE id = $2 AND status = $3 AND expires_at > NOW()`
 
 	cmd, err := d.Pool.Exec(ctx, query, domain.BookingStatusConfirmed, bookingID, domain.BookingStatusPending)
 	if err != nil {
@@ -216,8 +216,8 @@ func (d *DataBase) CancelBooking(ctx context.Context, bookingID int) error {
 	if err != nil {
 		return fmt.Errorf("ошибка CancelBooking при поиске брони: %w", err)
 	}
-	if status != domain.BookingStatusPending && status != domain.BookingStatusConfirmed {
-		// уже отменена — ничего не делаем
+	// отменяем только ожидающие брони
+	if status != domain.BookingStatusPending {
 		return nil
 	}
 
@@ -259,6 +259,25 @@ func (d *DataBase) RegisterUser(ctx context.Context, name, email string) (int, e
 	err := d.Pool.QueryRow(ctx, query, name, email).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("ошибка RegisterUser при добавлении пользователя: %w", err)
+	}
+
+	return id, nil
+}
+
+// GetUserByEmail возвращает ID пользователя по email (если пользователь не найден, возвращает 0, nil)
+func (d *DataBase) GetUserByEmail(ctx context.Context, email string) (int, error) {
+
+	query := `SELECT id
+	            FROM users
+			   WHERE email = $1`
+
+	var id int
+	err := d.Pool.QueryRow(ctx, query, email).Scan(&id)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("ошибка GetUserByEmail при получении пользователя по email: %w", err)
 	}
 
 	return id, nil

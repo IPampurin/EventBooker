@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Администратор - EventBooker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Панель администратора</h1>
+        <button id="createEventBtn">Создать мероприятие</button>
+        <div id="createForm" style="display: none; margin-top: 20px;">
+            <h3>Новое мероприятие</h3>
+            <div class="form-group">
+                <label>Название:</label>
+                <input type="text" id="eventName" required>
+            </div>
+            <div class="form-group">
+                <label>Дата и время:</label>
+                <input type="datetime-local" id="eventDate" required>
+            </div>
+            <div class="form-group">
+                <label>Количество мест:</label>
+                <input type="number" id="totalSeats" min="1" required>
+            </div>
+            <div class="form-group">
+                <label>Время подтверждения (минуты):</label>
+                <input type="number" id="bookingTTL" min="1" required>
+            </div>
+            <div class="form-group">
+                <label>Стоимость брони (руб):</label>
+                <input type="number" id="bookingPrice" min="0" value="0">
+            </div>
+            <button id="publishEventBtn">Опубликовать</button>
+        </div>
+        <div id="eventsList" style="margin-top: 30px;">
+            <h2>Список мероприятий</h2>
+            <div id="eventsContainer"></div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadEvents('admin');
+            document.getElementById('createEventBtn').addEventListener('click', () => {
+                document.getElementById('createForm').style.display = 'block';
+            });
+            document.getElementById('publishEventBtn').addEventListener('click', createEvent);
+        });
+
+        async function createEvent() {
+            const name = document.getElementById('eventName').value;
+            const date = document.getElementById('eventDate').value;
+            const totalSeats = parseInt(document.getElementById('totalSeats').value);
+            const bookingTTL = parseInt(document.getElementById('bookingTTL').value);
+            const bookingPrice = parseInt(document.getElementById('bookingPrice').value);
+
+            if (!name || !date || !totalSeats || !bookingTTL) {
+                showNotification('Заполните все поля', true);
+                return;
+            }
+
+            const eventData = {
+                name,
+                date: new Date(date).toISOString(),
+                totalSeats,
+                bookingTTLMinutes: bookingTTL,
+                bookingPrice
+            };
+
+            try {
+                const response = await fetch('/events', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(eventData)
+                });
+                if (!response.ok) throw new Error('Ошибка создания');
+                const result = await response.json();
+                showNotification('Событие создано и опубликовано');
+                document.getElementById('createForm').style.display = 'none';
+                document.getElementById('eventName').value = '';
+                document.getElementById('eventDate').value = '';
+                document.getElementById('totalSeats').value = '';
+                document.getElementById('bookingTTL').value = '';
+                document.getElementById('bookingPrice').value = '0';
+                loadEvents('admin');
+            } catch (err) {
+                showNotification('Ошибка: ' + err.message, true);
+            }
+        }
+    </script>
+</body>
+</html>

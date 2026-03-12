@@ -46,4 +46,7 @@ type ManageUsers interface {
 
 	// RegisterUser - метод для регистрации пользователя
 	RegisterUser(ctx context.Context, name, email string, log logger.Logger) (int, error)
+
+	// LoginUser проверяет наличие пользователя с указанным email и возвращает его ID
+	LoginUser(ctx context.Context, email string, log logger.Logger) (int, error)
 }

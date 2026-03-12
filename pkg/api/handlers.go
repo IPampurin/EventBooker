@@ -140,3 +140,62 @@ func RegisterUser(svc *service.Service, log logger.Logger) gin.HandlerFunc {
 		c.JSON(http.StatusCreated, gin.H{"id": id})
 	}
 }
+
+// LoginUser обрабатывает POST /login
+func LoginUser(svc *service.Service, log logger.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		var req loginRequest
+
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный email"})
+			return
+		}
+
+		id, err := svc.LoginUser(c.Request.Context(), req.Email, log)
+		if err != nil {
+			log.Error("ошибка входа", "email", req.Email, "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "внутренняя ошибка"})
+			return
+		}
+
+		if id == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "пользователь не найден"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"id": id})
+	}
+}
+
+// GetUserBooking обрабатывает GET /events/:id/book?user_id=
+func GetUserBooking(svc *service.Service, log logger.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		eventID, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID мероприятия"})
+			return
+		}
+
+		userID, err := strconv.Atoi(c.Query("user_id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный user_id"})
+			return
+		}
+
+		bookingID, err := svc.GetEventReserveOfUser(c.Request.Context(), eventID, userID, log)
+		if err != nil {
+			log.Error("ошибка получения брони", "event", eventID, "user", userID, "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "внутренняя ошибка"})
+			return
+		}
+
+		if bookingID == 0 {
+			c.JSON(http.StatusNotFound, gin.H{"error": "бронь не найдена"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"bookingId": bookingID})
+	}
+}
