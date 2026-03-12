@@ -7,8 +7,8 @@ import (
 	"github.com/IPampurin/EventBooker/pkg/domain"
 )
 
-// StorageDB - интерфейс локальной БД
-type StorageDB interface {
+// StorageMethods - интерфейс локальной БД
+type StorageMethods interface {
 	EventsTableMethods
 	BookingTableMethods
 	UsersTableMethods
