@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/IPampurin/EventBooker/pkg/api"
 	"github.com/IPampurin/EventBooker/pkg/configuration"
 	"github.com/IPampurin/EventBooker/pkg/service"
 	"github.com/gin-gonic/gin"
@@ -30,14 +29,14 @@ func Run(ctx context.Context, cfgServer *configuration.ConfServer, svc *service.
 		// используем переданный логгер для записи информации о запросе
 		log.LogRequest(c.Request.Context(), c.Request.Method, c.Request.URL.Path, c.Writer.Status(), duration)
 	})
-
-	// регистрируем эндпоинты
-	engine.POST("/events", api.CreateEvent(svc, log))                // создание мероприятия
-	engine.POST("/events/:id/book", api.ReserveSeat(svc, log))       // бронирование места
-	engine.POST("/events/:id/confirm", api.ConfirmReserve(svc, log)) // оплата брони (если мероприятие требует этого)
-	engine.GET("/events/:id", api.GetEvents(svc, log))               // получение информации о мероприятии и свободных местах
-	engine.POST("/register", api.RegisterUser(svc, log))             // регистрация пользователя
-
+	/*
+		// регистрируем эндпоинты
+		engine.POST("/events", api.CreateEvent(svc, log))                // создание мероприятия
+		engine.POST("/events/:id/book", api.ReserveSeat(svc, log))       // бронирование места
+		engine.POST("/events/:id/confirm", api.ConfirmReserve(svc, log)) // оплата брони (если мероприятие требует этого)
+		engine.GET("/events/:id", api.GetEvents(svc, log))               // получение информации о мероприятии и свободных местах
+		engine.POST("/register", api.RegisterUser(svc, log))             // регистрация пользователя
+	*/
 	// раздаём статические файлы из папки ./web
 	engine.Static("/static", "./web")
 

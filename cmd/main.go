@@ -10,6 +10,7 @@ import (
 	"github.com/IPampurin/EventBooker/pkg/broker"
 	"github.com/IPampurin/EventBooker/pkg/configuration"
 	"github.com/IPampurin/EventBooker/pkg/db"
+	overdueworker "github.com/IPampurin/EventBooker/pkg/overdueWorker"
 	"github.com/IPampurin/EventBooker/pkg/server"
 	"github.com/IPampurin/EventBooker/pkg/service"
 	"github.com/IPampurin/EventBooker/pkg/zSet"
@@ -58,7 +59,7 @@ func main() {
 		return
 	}
 
-	// получаем канал передачи просроченных броней из брокера в слой бизнес-логики
+	// запускаем брокер и получаем канал передачи просроченных броней из брокера обработчику
 	broker, err := broker.InitBroker(ctx, &cfg.Broker, zSetBrokerCh, appLogger)
 	if err != nil {
 		appLogger.Error("ошибка подключения к брокеру сообщений", "error", err)
@@ -67,7 +68,11 @@ func main() {
 	defer broker.Close()
 
 	// получаем экземпляр слоя бизнес-логики
-	service := service.InitService(ctx, storageDB, clientZSet, broker.Messages())
+	service := service.InitService(ctx, storageDB, clientZSet)
+
+	// получаем обработчик просроченных броней
+	worker := overdueworker.InitWorker(ctx, broker, service, appLogger)
+	defer worker.Stop()
 
 	// запускаем сервер
 	err = server.Run(ctx, &cfg.Server, service, appLogger)
