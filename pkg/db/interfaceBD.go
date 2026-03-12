@@ -3,13 +3,15 @@ package db
 import (
 	"context"
 	"time"
+
+	"github.com/IPampurin/EventBooker/pkg/domain"
 )
 
 // StorageDB - интерфейс локальной БД
 type StorageDB interface {
 	EventsTableMethods
-	BookerTableMethods
-	ManageUsersTable
+	BookingTableMethods
+	UsersTableMethods
 }
 
 // EventsTableMethods - методы для работы с таблицей events
@@ -19,14 +21,14 @@ type EventsTableMethods interface {
 	EventCreater(ctx context.Context, name string, date time.Time, bookingTTLMinutes, totalSeats, bookingPrice int) (int, error)
 
 	// GetEvents - получение всех предстоящих мероприятий с информацией о свободных местах
-	GetEvents(ctx context.Context) ([]*Event, error)
+	GetEvents(ctx context.Context) ([]*domain.Event, error)
 
 	// GetEventByID - получение события по id
-	GetEventByID(ctx context.Context, id int) (*Event, error)
+	GetEventByID(ctx context.Context, id int) (*domain.Event, error)
 }
 
-// BookerTableMethods - управление таблицей бронирования
-type BookerTableMethods interface {
+// BookingTableMethods - управление таблицей бронирования
+type BookingTableMethods interface {
 
 	// SeatReserver - бронирование места на мероприятии
 	SeatReserver(ctx context.Context, eventID, userID int, createdAt, expiresAt time.Time) (int, error)
@@ -41,8 +43,8 @@ type BookerTableMethods interface {
 	CancelBooking(ctx context.Context, bookingID int) error
 }
 
-// ManageUsersTable - управление таблицей с пользователями
-type ManageUsersTable interface {
+// UsersTableMethods - управление таблицей с пользователями
+type UsersTableMethods interface {
 
 	// RegisterUser - метод для регистрации пользователя
 	RegisterUser(ctx context.Context, name, email string) (int, error)

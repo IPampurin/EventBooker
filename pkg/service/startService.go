@@ -1,7 +1,9 @@
 package service
 
+import "github.com/IPampurin/EventBooker/pkg/db"
+
 type Service struct {
-	//	link      db.LinkMethods
-	//	analytics db.AnalyticsMethods
-	//	cache     cache.CacheMethods
+	event   db.EventsTableMethods
+	booking db.BookingTableMethods
+	user    db.UsersTableMethods
 }

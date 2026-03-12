@@ -1,0 +1,78 @@
+package zSet
+
+import (
+	"context"
+	"strconv"
+	"time"
+
+	"github.com/IPampurin/EventBooker/pkg/configuration"
+	"github.com/wb-go/wbf/logger"
+	"github.com/wb-go/wbf/redis"
+	"github.com/wb-go/wbf/retry"
+)
+
+// watchOverdueLoop периодически проверяет ZSET и отправляет найденные ID в канал
+func watchOverdueLoop(ctx context.Context, client *ClientZSet, cfg *configuration.ConfZSet, ch chan<- int, log logger.Logger) {
+
+	defer close(ch)      // закрываем канал при выходе
+	defer client.Close() // закрываем соединение с Redis
+
+	ticker := time.NewTicker(cfg.CheckInterval)
+	defer ticker.Stop()
+
+	// стратегия повторов для чтения из Redis
+	readRetry := retry.Strategy{
+		Attempts: cfg.ReadRetryAttempts,
+		Delay:    cfg.ReadRetryDelay,
+		Backoff:  cfg.ReadRetryBackoff,
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("горутина наблюдателя Redis остановлена по контексту")
+			return
+
+		case <-ticker.C:
+			now := time.Now().Unix()
+
+			// читаем из ZSET с повторными попытками
+			var members []string
+			err := retry.DoContext(ctx, readRetry, func() error {
+				var e error
+				members, e = client.ZRangeByScore(ctx, cfg.OverdueKey, 0, now)
+				if e != nil && e != redis.NoMatches {
+					return e // любая ошибка, кроме "нет элементов", запустит повтор
+				}
+				return nil // успех или redis.NoMatches (нет элементов)
+			})
+
+			if err != nil {
+				log.Error("ошибка чтения ZSET после всех попыток", "error", err)
+				continue
+			}
+
+			// обрабатываем каждый найденный элемент
+			for _, member := range members {
+
+				id, err := strconv.Atoi(member)
+				if err != nil {
+					log.Error("неверный формат ID в Redis", "value", member)
+					continue
+				}
+
+				select {
+				case ch <- id:
+					// успешно отправили – удаляем элемент из ZSET
+					if err := client.ZRem(ctx, cfg.OverdueKey, member); err != nil {
+						log.Error("не удалось удалить элемент из ZSET", "id", id, "error", err)
+					} else {
+						log.Info("просроченная бронь отправлена и удалена из Redis", "id", id)
+					}
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}
+}

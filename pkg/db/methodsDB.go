@@ -9,6 +9,21 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// dbEventToDomainEvent преобразует модель БД в доменную модель
+func dbEventToDomainEvent(e *Event) *domain.Event {
+
+	return &domain.Event{
+		ID:                e.ID,
+		Name:              e.Name,
+		DateEvent:         e.DateEvent,
+		BookingTTLMinutes: e.BookingTTLMinutes,
+		TotalSeats:        e.TotalSeats,
+		FreeSeats:         e.FreeSeats,
+		BookedSeats:       e.TotalSeats - e.FreeSeats,
+		BookingPrice:      e.BookingPrice,
+	}
+}
+
 // EventCreater - создание мероприятия
 func (d *DataBase) EventCreater(ctx context.Context, name string, date time.Time, bookingTTLMinutes, totalSeats, bookingPrice int) (int, error) {
 
@@ -26,7 +41,7 @@ func (d *DataBase) EventCreater(ctx context.Context, name string, date time.Time
 }
 
 // GetEvents - получение всех предстоящих мероприятий с информацией о свободных местах
-func (d *DataBase) GetEvents(ctx context.Context) ([]*Event, error) {
+func (d *DataBase) GetEvents(ctx context.Context) ([]*domain.Event, error) {
 
 	query := `SELECT id, name, date_event, booking_ttl_minutes, total_seats, free_seats, booking_price
 	            FROM events
@@ -60,13 +75,16 @@ func (d *DataBase) GetEvents(ctx context.Context) ([]*Event, error) {
 		return nil, fmt.Errorf("ошибка GetEvents при итерации по записям из events: %w", err)
 	}
 
-	// TODO: переделать на возврат доменной модели
+	result := make([]*domain.Event, len(events))
+	for i := range events {
+		result[i] = dbEventToDomainEvent(events[i])
+	}
 
-	return events, nil
+	return result, nil
 }
 
 // GetEventByID - получение события по id
-func (d *DataBase) GetEventByID(ctx context.Context, id int) (*Event, error) {
+func (d *DataBase) GetEventByID(ctx context.Context, id int) (*domain.Event, error) {
 
 	query := `SELECT id, name, date_event, booking_ttl_minutes, total_seats, free_seats, booking_price
 	            FROM events
@@ -83,12 +101,10 @@ func (d *DataBase) GetEventByID(ctx context.Context, id int) (*Event, error) {
 		&e.BookingPrice,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка GetEventByID получения записи в events", err)
+		return nil, fmt.Errorf("ошибка GetEventByID получения записи в events: %w", err)
 	}
 
-	// TODO: переделать на возврат доменной модели
-
-	return e, nil
+	return dbEventToDomainEvent(e), nil
 }
 
 // SeatReserver - бронирование места на мероприятии
@@ -102,11 +118,11 @@ func (d *DataBase) SeatReserver(ctx context.Context, eventID, userID int, create
 
 	// проверяем наличие свободных мест и блокируем строку
 	var freeSeats int
-	checkQueery := `SELECT free_seats
+	checkQuery := `SELECT free_seats
 	                  FROM events
 					 WHERE id = $1 FOR UPDATE`
 
-	err = tx.QueryRow(ctx, checkQueery, eventID).Scan(&freeSeats)
+	err = tx.QueryRow(ctx, checkQuery, eventID).Scan(&freeSeats)
 	if err != nil {
 		return 0, fmt.Errorf("ошибка SeatReserver при проверке free_seats в транзакции: %w", err)
 	}
@@ -126,11 +142,11 @@ func (d *DataBase) SeatReserver(ctx context.Context, eventID, userID int, create
 
 	// создаём бронь
 	query := `   INSERT INTO bookings(event_id, user_id, status, created_at, expires_at)
-	             VALUES ($1, $2, $3, $4)
+	             VALUES ($1, $2, $3, $4, $5)
 			  RETURNING id`
 
 	var id int
-	err = tx.QueryRow(ctx, query, eventID, userID, createdAt, expiresAt).Scan(&id)
+	err = tx.QueryRow(ctx, query, eventID, userID, domain.BookingStatusPending, createdAt, expiresAt).Scan(&id)
 	if err != nil {
 		return id, fmt.Errorf("ошибка SeatReserver добавления записи о новой брони: %w", err)
 	}
