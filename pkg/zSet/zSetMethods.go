@@ -17,17 +17,17 @@ func (c *ClientZSet) ZAdd(ctx context.Context, score float64, member interface{}
 }
 
 // ZRangeByScore получает элементы из сортированного множества с баллами в интервале [min, max]
-func (c *ClientZSet) ZRangeByScore(ctx context.Context, key string, min, max int64) ([]string, error) {
+func (c *ClientZSet) ZRangeByScore(ctx context.Context, min, max int64) ([]string, error) {
 
 	// используем оригинальный тип goredis.ZRangeBy
-	return c.Client.ZRangeByScore(ctx, key, &goredis.ZRangeBy{
+	return c.Client.ZRangeByScore(ctx, c.key, &goredis.ZRangeBy{
 		Min: strconv.FormatInt(min, 10),
 		Max: strconv.FormatInt(max, 10),
 	}).Result()
 }
 
 // ZRem удаляет элемент из сортированного множества
-func (c *ClientZSet) ZRem(ctx context.Context, key string, members ...interface{}) error {
+func (c *ClientZSet) ZRem(ctx context.Context, members ...interface{}) error {
 
-	return c.Client.ZRem(ctx, key, members...).Err()
+	return c.Client.ZRem(ctx, c.key, members...).Err()
 }

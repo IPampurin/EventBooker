@@ -15,12 +15,12 @@ import (
 func watchOverdueLoop(ctx context.Context, client *ClientZSet, cfg *configuration.ConfZSet, ch chan<- int, log logger.Logger) {
 
 	defer close(ch)      // закрываем канал при выходе
-	defer client.Close() // закрываем соединение с Redis
+	defer client.Close() // закрываем соединение с ZSET
 
 	ticker := time.NewTicker(cfg.CheckInterval)
 	defer ticker.Stop()
 
-	// стратегия повторов для чтения из Redis
+	// стратегия повторов для чтения из ZSET
 	readRetry := retry.Strategy{
 		Attempts: cfg.ReadRetryAttempts,
 		Delay:    cfg.ReadRetryDelay,
@@ -30,7 +30,7 @@ func watchOverdueLoop(ctx context.Context, client *ClientZSet, cfg *configuratio
 	for {
 		select {
 		case <-ctx.Done():
-			log.Info("горутина наблюдателя Redis остановлена по контексту")
+			log.Info("горутина наблюдателя ZSET остановлена по контексту")
 			return
 
 		case <-ticker.C:
@@ -40,7 +40,7 @@ func watchOverdueLoop(ctx context.Context, client *ClientZSet, cfg *configuratio
 			var members []string
 			err := retry.DoContext(ctx, readRetry, func() error {
 				var e error
-				members, e = client.ZRangeByScore(ctx, cfg.OverdueKey, 0, now)
+				members, e = client.ZRangeByScore(ctx, 0, now)
 				if e != nil && e != redis.NoMatches {
 					return e // любая ошибка, кроме "нет элементов", запустит повтор
 				}
@@ -57,17 +57,17 @@ func watchOverdueLoop(ctx context.Context, client *ClientZSet, cfg *configuratio
 
 				id, err := strconv.Atoi(member)
 				if err != nil {
-					log.Error("неверный формат ID в Redis", "value", member)
+					log.Error("неверный формат ID в ZSET", "value", member)
 					continue
 				}
 
 				select {
 				case ch <- id:
 					// успешно отправили – удаляем элемент из ZSET
-					if err := client.ZRem(ctx, cfg.OverdueKey, member); err != nil {
+					if err := client.ZRem(ctx, member); err != nil {
 						log.Error("не удалось удалить элемент из ZSET", "id", id, "error", err)
 					} else {
-						log.Info("просроченная бронь отправлена и удалена из Redis", "id", id)
+						log.Info("просроченная бронь отправлена и удалена из ZSET", "id", id)
 					}
 				case <-ctx.Done():
 					return

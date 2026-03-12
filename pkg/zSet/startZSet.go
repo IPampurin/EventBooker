@@ -16,8 +16,8 @@ type ClientZSet struct {
 	key string
 }
 
-// InitRedis запускает работу с Redis и горутину для отслеживания просроченных бронирований
-func InitRedis(ctx context.Context, cfg *configuration.ConfZSet, log logger.Logger) (*ClientZSet, <-chan int, error) {
+// InitZSet запускает работу с Redis и горутину для отслеживания просроченных бронирований
+func InitZSet(ctx context.Context, cfg *configuration.ConfZSet, log logger.Logger) (*ClientZSet, <-chan int, error) {
 
 	// определяем конфигурацию подключения к Redis
 	options := redis.Options{
@@ -30,18 +30,25 @@ func InitRedis(ctx context.Context, cfg *configuration.ConfZSet, log logger.Logg
 	// пробуем подключиться
 	client, err := redis.Connect(options)
 	if err != nil {
-		return nil, nil, fmt.Errorf("ошибка установки соединения с Redis: %v\n", err)
+		return nil, nil, fmt.Errorf("ошибка установки соединения с реализацией ZSet: %v\n", err)
 	}
 
 	// проверяем подключение
-	if err := client.Ping(context.Background()); err != nil {
-		return nil, nil, fmt.Errorf("ошибка подключения к Redis: %v\n", err)
+	if err := client.Ping(ctx); err != nil {
+		return nil, nil, fmt.Errorf("ошибка подключения к реализации ZSet: %v\n", err)
 	}
 
-	log.Info("Рэдис подключен.")
+	if cfg.OverdueKey == "" {
+		return nil, nil, fmt.Errorf("ошибка инициализации ZSet: задайте ZSET_OVERDUE_KEY\n")
+	}
+
+	log.Info("ZSet подключен.")
 
 	// оборачиваем клиент в структуру с методами ZSET
-	clientRedis := &ClientZSet{Client: client}
+	clientRedis := &ClientZSet{
+		Client: client,
+		key:    cfg.OverdueKey,
+	}
 
 	// канал для передачи номеров просроченных броней брокеру
 	ch := make(chan int, 100)

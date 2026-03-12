@@ -1,9 +1,13 @@
 package service
 
-import "github.com/IPampurin/EventBooker/pkg/db"
+import (
+	"github.com/IPampurin/EventBooker/pkg/db"
+	"github.com/IPampurin/EventBooker/pkg/zSet"
+)
 
 type Service struct {
 	event   db.EventsTableMethods
 	booking db.BookingTableMethods
 	user    db.UsersTableMethods
+	zSet    zSet.ZSetMethods
 }
