@@ -12,6 +12,10 @@ import (
 // EventCreater - создание мероприятия
 func (s *Service) EventCreater(ctx context.Context, name string, date time.Time, bookingTTLMinutes, totalSeats, bookingPrice int, log logger.Logger) (int, error) {
 
+	if date.Before(time.Now()) {
+		return 0, fmt.Errorf("дата мероприятия не может быть в прошлом")
+	}
+
 	id, err := s.storage.EventCreater(ctx, name, date, bookingTTLMinutes, totalSeats, bookingPrice)
 	if err != nil {
 		return 0, fmt.Errorf("ошибка EventCreater при создании события: %w", err)
@@ -51,7 +55,16 @@ func (s *Service) GetEventByID(ctx context.Context, id int, log logger.Logger) (
 // SeatReserver - бронирование места на мероприятии
 func (s *Service) SeatReserver(ctx context.Context, eventID, userID int, createdAt time.Time, log logger.Logger) (int, error) {
 
-	// получаем мероприятие, чтобы узнать время жизни брони
+	// 1. Проверяем, нет ли уже у пользователя брони на это событие
+	existingBookingID, err := s.storage.GetEventReserveOfUser(ctx, eventID, userID)
+	if err != nil {
+		return 0, fmt.Errorf("ошибка проверки существующей брони: %w", err)
+	}
+	if existingBookingID != 0 {
+		return 0, fmt.Errorf("пользователь уже забронировал место на этом мероприятии")
+	}
+
+	// 2. Получаем мероприятие, чтобы узнать время жизни брони
 	event, err := s.storage.GetEventByID(ctx, eventID)
 	if err != nil {
 		return 0, fmt.Errorf("ошибка получения события: %w", err)
@@ -62,13 +75,13 @@ func (s *Service) SeatReserver(ctx context.Context, eventID, userID int, created
 	}
 	expiresAt := createdAt.Add(time.Duration(event.BookingTTLMinutes) * time.Minute)
 
-	// бронируем место в БД
+	// 3. Бронируем место в БД
 	bookingID, err := s.storage.SeatReserver(ctx, eventID, userID, createdAt, expiresAt)
 	if err != nil {
 		return 0, fmt.Errorf("ошибка бронирования: %w", err)
 	}
 
-	// добавляем запись в ZSet для отслеживания просрочки
+	// 4. Добавляем запись в ZSet для отслеживания просрочки
 	if err := s.zSet.ZAdd(ctx, float64(expiresAt.Unix()), bookingID); err != nil {
 		log.Error("не удалось добавить бронь в ZSet", "id", bookingID, "error", err)
 		// компенсация - отменяем созданную бронь в БД

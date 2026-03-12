@@ -31,3 +31,15 @@ type registerRequest struct {
 type loginRequest struct {
 	Email string `json:"email" binding:"required,email"`
 }
+
+// EventResponse — данные мероприятия для клиента
+type EventResponse struct {
+	ID                int       `json:"id"`
+	Name              string    `json:"name"`
+	DateEvent         time.Time `json:"dateEvent"`
+	BookingTTLMinutes int       `json:"bookingTTLMinutes"`
+	TotalSeats        int       `json:"totalSeats"`
+	FreeSeats         int       `json:"freeSeats"`
+	BookedSeats       int       `json:"bookedSeats"`
+	BookingPrice      int       `json:"bookingPrice"`
+}

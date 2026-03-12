@@ -100,7 +100,19 @@ func GetEventByID(svc *service.Service, log logger.Logger) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, event)
+		// преобразуем
+		response := &EventResponse{
+			ID:                event.ID,
+			Name:              event.Name,
+			DateEvent:         event.DateEvent,
+			BookingTTLMinutes: event.BookingTTLMinutes,
+			TotalSeats:        event.TotalSeats,
+			FreeSeats:         event.FreeSeats,
+			BookedSeats:       event.BookedSeats,
+			BookingPrice:      event.BookingPrice,
+		}
+
+		c.JSON(http.StatusOK, response)
 	}
 }
 
@@ -115,7 +127,22 @@ func GetAllEvents(svc *service.Service, log logger.Logger) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, events)
+		// преобразуем
+		response := make([]*EventResponse, len(events))
+		for i := range events {
+			response[i] = &EventResponse{
+				ID:                events[i].ID,
+				Name:              events[i].Name,
+				DateEvent:         events[i].DateEvent,
+				BookingTTLMinutes: events[i].BookingTTLMinutes,
+				TotalSeats:        events[i].TotalSeats,
+				FreeSeats:         events[i].FreeSeats,
+				BookedSeats:       events[i].BookedSeats,
+				BookingPrice:      events[i].BookingPrice,
+			}
+		}
+
+		c.JSON(http.StatusOK, response)
 	}
 }
 

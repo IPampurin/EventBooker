@@ -45,7 +45,7 @@ func (d *DataBase) GetEvents(ctx context.Context) ([]*domain.Event, error) {
 
 	query := `SELECT id, name, date_event, booking_ttl_minutes, total_seats, free_seats, booking_price
 	            FROM events
-			   ORDER BY date_event`
+			   ORDER BY date_event ASC`
 
 	rows, err := d.Pool.Query(ctx, query)
 	if err != nil {
@@ -163,10 +163,10 @@ func (d *DataBase) GetEventReserveOfUser(ctx context.Context, eventID, userID in
 
 	query := `SELECT id
 	          FROM bookings
-			 WHERE event_id = $1 AND user_id = $2`
+			 WHERE event_id = $1 AND user_id = $2 AND status = $3`
 
 	var id int
-	err := d.Pool.QueryRow(ctx, query, eventID, userID).Scan(&id)
+	err := d.Pool.QueryRow(ctx, query, eventID, userID, domain.BookingStatusPending).Scan(&id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return 0, nil

@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Администратор - EventBooker</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
+    <div class="admin-page">
         <h1>Панель администратора</h1>
         <button id="createEventBtn">Создать мероприятие</button>
-        <div id="createForm" style="display: none; margin-top: 20px;">
+        <div id="createForm" style="display: none; margin: 20px 0;">
             <h3>Новое мероприятие</h3>
             <div class="form-group">
                 <label>Название:</label>
@@ -36,21 +36,60 @@
         </div>
         <div id="eventsList" style="margin-top: 30px;">
             <h2>Список мероприятий</h2>
-            <div id="eventsContainer"></div>
+            <div id="eventsContainer">
+                <div class="event-header">
+                    <span class="event-id">ID</span>
+                    <span class="event-name">Название</span>
+                    <span class="event-date">Дата и время</span>
+                    <span class="event-seats">Своб./Всего</span>
+                    <span class="event-price">Цена</span>
+                </div>
+            </div>
         </div>
     </div>
 
     <div id="notification" class="notification"></div>
 
-    <script src="script.js"></script>
+    <script src="/static/script.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            loadEvents('admin');
+            loadEvents();
             document.getElementById('createEventBtn').addEventListener('click', () => {
                 document.getElementById('createForm').style.display = 'block';
             });
             document.getElementById('publishEventBtn').addEventListener('click', createEvent);
         });
+
+        async function loadEvents() {
+            try {
+                const response = await fetch('/events');
+                if (!response.ok) throw new Error('Ошибка загрузки');
+                const events = await response.json();
+                renderEvents(events);
+            } catch (err) {
+                showNotification('Ошибка загрузки: ' + err.message, true);
+            }
+        }
+
+        function renderEvents(events) {
+            const container = document.getElementById('eventsContainer');
+            // Удаляем все строки, кроме заголовка
+            while (container.children.length > 1) {
+                container.removeChild(container.lastChild);
+            }
+            events.forEach(event => {
+                const div = document.createElement('div');
+                div.className = 'event-item';
+                div.innerHTML = `
+                    <span class="event-id">${event.id}</span>
+                    <span class="event-name">${event.name}</span>
+                    <span class="event-date">${new Date(event.dateEvent).toLocaleString()}</span>
+                    <span class="event-seats">${event.freeSeats}/${event.totalSeats}</span>
+                    <span class="event-price">${event.bookingPrice} руб.</span>
+                `;
+                container.appendChild(div);
+            });
+        }
 
         async function createEvent() {
             const name = document.getElementById('eventName').value;
@@ -79,7 +118,6 @@
                     body: JSON.stringify(eventData)
                 });
                 if (!response.ok) throw new Error('Ошибка создания');
-                const result = await response.json();
                 showNotification('Событие создано и опубликовано');
                 document.getElementById('createForm').style.display = 'none';
                 document.getElementById('eventName').value = '';
@@ -87,7 +125,7 @@
                 document.getElementById('totalSeats').value = '';
                 document.getElementById('bookingTTL').value = '';
                 document.getElementById('bookingPrice').value = '0';
-                loadEvents('admin');
+                loadEvents();
             } catch (err) {
                 showNotification('Ошибка: ' + err.message, true);
             }

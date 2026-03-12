@@ -1,21 +1,25 @@
+/* ===== ОБЩИЕ СТИЛИ ===== */
+* {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
     padding: 0;
-    height: 100vh;
-    background: linear-gradient(135deg, #2b2b2b, #a0a0a0);
+    min-height: 100vh;
     font-family: Arial, sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: linear-gradient(135deg, #2b2b2b, #a0a0a0);
 }
 
+/* ===== ТИТУЛЬНАЯ СТРАНИЦА ===== */
 .split-layout {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 80%;
-    height: 80%;
+    height: 80vh; /* используем vh для центрирования */
     max-width: 1200px;
+    margin: 10vh auto 0; /* выравнивание по центру */
 }
 
 .left-circle, .right-circle {
@@ -55,19 +59,22 @@ body {
     margin: 0 20px;
 }
 
-.container {
+/* ===== АДМИНКА И ПОЛЬЗОВАТЕЛЬСКАЯ СТРАНИЦА ===== */
+.admin-page, .user-page {
     max-width: 1200px;
     margin: 20px auto;
     padding: 20px;
-    background: rgba(255,255,255,0.9);
+    background: transparent; /* прозрачный фон, градиент виден */
     border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.2);
 }
 
-h1, h2 {
-    color: #333;
+.admin-page h1, .user-page h1,
+.admin-page h2, .user-page h2 {
+    color: white;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
 }
 
+/* Кнопки */
 button {
     background-color: #8A2BE2;
     color: white;
@@ -101,27 +108,63 @@ label {
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
+    color: white;
 }
 
-.event-item {
-    border: 1px solid #ddd;
-    padding: 15px;
-    margin: 10px 0;
-    border-radius: 5px;
-    background: white;
+/* Список мероприятий */
+.event-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 15px;
+    padding: 10px 15px;
+    margin: 10px 0;
+    background: rgba(0,0,0,0.5);
+    border-radius: 5px;
+    font-weight: bold;
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
 }
 
-.event-info {
-    flex-grow: 1;
+.event-header span {
+    color: white;
 }
+
+/* Ширина колонок (должна совпадать с .event-item span) */
+.event-header .event-id { min-width: 60px; }
+.event-header .event-name { min-width: 150px; }
+.event-header .event-date { min-width: 180px; }
+.event-header .event-seats { min-width: 80px; }
+.event-header .event-price { min-width: 80px; }
+.event-header .event-actions-header { min-width: 120px; }
+
+.event-item {
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 10px 15px;
+    margin: 10px 0;
+    border-radius: 5px;
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.event-item span {
+    color: white;
+}
+
+.event-item .event-id { min-width: 60px; }
+.event-item .event-name { min-width: 150px; font-weight: bold; }
+.event-item .event-date { min-width: 180px; }
+.event-item .event-seats { min-width: 80px; }
+.event-item .event-price { min-width: 80px; }
+.event-item .event-actions { min-width: 120px; }
 
 .event-actions button {
-    margin-left: 10px;
+    margin-left: 0;
 }
 
+/* Модальные окна */
 .modal {
     display: none;
     position: fixed;
@@ -142,6 +185,7 @@ label {
     width: 80%;
     max-width: 500px;
     border-radius: 10px;
+    color: black;
 }
 
 .close {
@@ -156,6 +200,7 @@ label {
     color: black;
 }
 
+/* Уведомления */
 .notification {
     position: fixed;
     top: 20px;
@@ -172,6 +217,7 @@ label {
     background: #f44336;
 }
 
+/* Модальное окно входа/регистрации */
 .split-modal {
     display: flex;
     gap: 20px;
@@ -185,4 +231,14 @@ label {
 
 .split-modal > div:first-child {
     border-left: none;
+}
+
+/* Заглушка после подтверждения */
+.confirmed-placeholder {
+    color: #4CAF50;
+    font-weight: bold;
+    background: rgba(255,255,255,0.2);
+    padding: 5px 10px;
+    border-radius: 5px;
+    display: inline-block;
 }

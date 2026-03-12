@@ -43,6 +43,9 @@ func Run(ctx context.Context, cfgServer *configuration.ConfServer, svc *service.
 
 	// раздаём статические файлы из папки ./web
 	engine.Static("/static", "./web")
+	// отдельные страницы
+	engine.StaticFile("/admin.html", "./web/admin.html")
+	engine.StaticFile("/user.html", "./web/user.html")
 
 	// для корневого пути отдаём index.html
 	engine.GET("/", func(c *ginext.Context) {

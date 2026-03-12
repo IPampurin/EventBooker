@@ -4,15 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Пользователь - EventBooker</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
+    <div class="user-page">
         <h1>Страница пользователя</h1>
         <div id="userInfo"></div>
         <div id="eventsList">
             <h2>Мероприятия</h2>
-            <div id="eventsContainer"></div>
+            <div id="eventsContainer">
+                <div class="event-header">
+                    <span class="event-id">ID</span>
+                    <span class="event-name">Название</span>
+                    <span class="event-date">Дата и время</span>
+                    <span class="event-seats">Своб./Всего</span>
+                    <span class="event-price">Цена</span>
+                    <span class="event-actions-header">Действие</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -49,9 +58,10 @@
 
     <div id="notification" class="notification"></div>
 
-    <script src="script.js"></script>
+    <script src="/static/script.js"></script>
     <script>
         let currentUserId = null;
+        let currentEventId = null;
         let currentBookingId = null;
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -59,7 +69,7 @@
             if (savedUserId) {
                 currentUserId = parseInt(savedUserId);
                 document.getElementById('userInfo').innerText = `Вы вошли как пользователь ID: ${currentUserId}`;
-                loadEvents('user');
+                loadEvents();
             } else {
                 document.getElementById('authModal').style.display = 'block';
             }
@@ -92,19 +102,23 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name, email })
                     });
-                    if (response.status === 409) {
-                        showNotification('Пользователь с таким email уже существует. Воспользуйтесь входом.', true);
+                    if (!response.ok) {
+                        let errorMsg = 'Ошибка регистрации';
+                        try {
+                            const err = await response.json();
+                            errorMsg = err.error || errorMsg;
+                        } catch (e) {}
+                        showNotification(errorMsg, true);
                         return;
                     }
-                    if (!response.ok) throw new Error('Ошибка регистрации');
                     const result = await response.json();
                     currentUserId = result.id;
                     localStorage.setItem('userId', currentUserId);
                     document.getElementById('userInfo').innerText = `Вы вошли как пользователь ID: ${currentUserId}`;
                     document.getElementById('authModal').style.display = 'none';
-                    loadEvents('user');
+                    loadEvents();
                 } catch (err) {
-                    showNotification('Ошибка: ' + err.message, true);
+                    showNotification('Ошибка сети: ' + err.message, true);
                 }
             });
 
@@ -130,113 +144,185 @@
                     localStorage.setItem('userId', currentUserId);
                     document.getElementById('userInfo').innerText = `Вы вошли как пользователь ID: ${currentUserId}`;
                     document.getElementById('authModal').style.display = 'none';
-                    loadEvents('user');
+                    loadEvents();
                 } catch (err) {
                     showNotification('Ошибка: ' + err.message, true);
                 }
             });
         });
 
-        async function loadEvents(role) {
+        async function loadEvents() {
             try {
                 const response = await fetch('/events');
                 if (!response.ok) throw new Error('Не удалось загрузить мероприятия');
                 const events = await response.json();
-                renderEvents(events, role);
+                renderEvents(events);
             } catch (err) {
                 showNotification('Ошибка загрузки: ' + err.message, true);
             }
         }
 
-        function renderEvents(events, role) {
+        function renderEvents(events) {
             const container = document.getElementById('eventsContainer');
-            container.innerHTML = '';
+            container.innerHTML = `
+                <div class="event-header">
+                    <span class="event-id">ID</span>
+                    <span class="event-name">Название</span>
+                    <span class="event-date">Дата и время</span>
+                    <span class="event-seats">Своб./Всего</span>
+                    <span class="event-price">Цена</span>
+                    <span class="event-actions-header">Действие</span>
+                </div>
+            `;
+            const now = new Date();
             events.forEach(event => {
-                const freeSeats = event.freeSeats;
+                const eventDate = new Date(event.dateEvent);
+                const isPast = eventDate < now;
                 const div = document.createElement('div');
                 div.className = 'event-item';
+                div.dataset.eventId = event.id;
+                div.dataset.freeSeats = event.freeSeats;
+                div.dataset.isPast = isPast;
                 div.innerHTML = `
-                    <div class="event-info">
-                        <strong>${event.name}</strong> (ID: ${event.id})<br>
-                        Дата: ${new Date(event.dateEvent).toLocaleString()}<br>
-                        Мест: всего ${event.totalSeats}, свободно ${freeSeats}<br>
-                        Стоимость брони: ${event.bookingPrice} руб.
-                    </div>
-                    <div class="event-actions" id="event-${event.id}">
-                    </div>
+                    <span class="event-id">${event.id}</span>
+                    <span class="event-name">${event.name}</span>
+                    <span class="event-date">${eventDate.toLocaleString()}</span>
+                    <span class="event-seats">${event.freeSeats}/${event.totalSeats}</span>
+                    <span class="event-price">${event.bookingPrice} руб.</span>
+                    <div class="event-actions" id="event-${event.id}"></div>
                 `;
                 container.appendChild(div);
-                const actionsDiv = div.querySelector(`.event-actions`);
-                if (role === 'user' && currentUserId) {
-                    checkUserBooking(event.id, currentUserId).then(bookingId => {
-                        if (bookingId) {
-                            actionsDiv.innerHTML = `<button class="confirm-btn" data-event-id="${event.id}" data-booking-id="${bookingId}">Подтвердить бронирование</button>`;
+            });
+            if (currentUserId) {
+                updateButtons();
+            }
+        }
+
+        async function updateButtons() {
+            const eventItems = document.querySelectorAll('.event-item');
+            for (const item of eventItems) {
+                const eventId = item.dataset.eventId;
+                const freeSeats = parseInt(item.dataset.freeSeats);
+                const isPast = item.dataset.isPast === 'true';
+                const actionsDiv = item.querySelector('.event-actions');
+                if (!actionsDiv) continue;
+
+                if (isPast) {
+                    actionsDiv.innerHTML = `<span>Мероприятие прошло</span>`;
+                    continue;
+                }
+
+                try {
+                    const response = await fetch(`/events/${eventId}/book?user_id=${currentUserId}`);
+                    if (response.status === 404) {
+                        // Брони нет — показываем кнопку "Забронировать", если есть места
+                        if (freeSeats > 0) {
+                            actionsDiv.innerHTML = `<button class="book-btn" data-event-id="${eventId}">Забронировать</button>`;
                         } else {
+                            actionsDiv.innerHTML = `<span>Нет мест</span>`;
+                        }
+                    } else if (response.ok) {
+                        const data = await response.json();
+                        if (data.bookingId) {
+                            actionsDiv.innerHTML = `<button class="confirm-btn" data-event-id="${eventId}" data-booking-id="${data.bookingId}">Подтвердить</button>`;
+                        } else {
+                            // Странный случай, но обработаем
                             if (freeSeats > 0) {
-                                actionsDiv.innerHTML = `<button class="book-btn" data-event-id="${event.id}">Забронировать</button>`;
+                                actionsDiv.innerHTML = `<button class="book-btn" data-event-id="${eventId}">Забронировать</button>`;
                             } else {
                                 actionsDiv.innerHTML = `<span>Нет мест</span>`;
                             }
                         }
-                        attachEventListeners(actionsDiv, event.id);
-                    });
+                    } else {
+                        // Другая ошибка (500)
+                        console.error(`Ошибка проверки брони для события ${eventId}, статус ${response.status}`);
+                        actionsDiv.innerHTML = `<span>Ошибка сервера</span>`;
+                    }
+                } catch (err) {
+                    console.error(`Исключение при проверке брони для события ${eventId}:`, err);
+                    actionsDiv.innerHTML = `<span>Ошибка сети</span>`;
                 }
-            });
-        }
-
-        async function checkUserBooking(eventId, userId) {
-            try {
-                const response = await fetch(`/events/${eventId}/book?user_id=${userId}`);
-                if (!response.ok) return null;
-                const data = await response.json();
-                return data.bookingId || null;
-            } catch {
-                return null;
             }
+            attachEventListeners();
         }
 
-        function attachEventListeners(actionsDiv, eventId) {
-            const bookBtn = actionsDiv.querySelector('.book-btn');
-            if (bookBtn) {
-                bookBtn.addEventListener('click', async () => {
+        function attachEventListeners() {
+            document.querySelectorAll('.book-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const eventId = e.target.dataset.eventId;
                     try {
                         const response = await fetch(`/events/${eventId}/book`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ userId: currentUserId })
                         });
-                        if (!response.ok) throw new Error('Ошибка бронирования');
+                        if (!response.ok) {
+                            let errorMsg = 'Ошибка бронирования';
+                            try {
+                                const err = await response.json();
+                                errorMsg = err.error || errorMsg;
+                            } catch (e) {}
+                            showNotification(errorMsg, true);
+                            return;
+                        }
                         showNotification('Место забронировано!');
-                        loadEvents('user');
+                        loadEvents(); // перезагружаем список, чтобы обновить места и кнопки
                     } catch (err) {
-                        showNotification('Ошибка: ' + err.message, true);
+                        showNotification('Ошибка сети: ' + err.message, true);
                     }
                 });
-            }
+            });
 
-            const confirmBtn = actionsDiv.querySelector('.confirm-btn');
-            if (confirmBtn) {
-                confirmBtn.addEventListener('click', async () => {
-                    const bookingId = confirmBtn.dataset.bookingId;
+            document.querySelectorAll('.confirm-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const eventId = e.target.dataset.eventId;
+                    const bookingId = e.target.dataset.bookingId;
                     currentBookingId = bookingId;
+                    currentEventId = eventId;
                     document.getElementById('confirmModal').style.display = 'block';
-                    document.getElementById('payBtn').onclick = async () => {
+
+                    // Убираем старый обработчик, чтобы не накапливались
+                    const payBtn = document.getElementById('payBtn');
+                    const newPayBtn = payBtn.cloneNode(true);
+                    payBtn.parentNode.replaceChild(newPayBtn, payBtn);
+
+                    newPayBtn.addEventListener('click', async () => {
                         try {
                             const response = await fetch(`/events/${eventId}/confirm`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ bookingId: parseInt(bookingId) })
                             });
-                            if (!response.ok) throw new Error('Ошибка подтверждения');
+                            if (!response.ok) {
+                                let errorMsg = 'Ошибка подтверждения';
+                                try {
+                                    const err = await response.json();
+                                    errorMsg = err.error || errorMsg;
+                                } catch (e) {}
+                                showNotification(errorMsg, true);
+                                return;
+                            }
                             showNotification('Бронь подтверждена!');
                             document.getElementById('confirmModal').style.display = 'none';
-                            loadEvents('user');
+                            // Заменяем кнопку на заглушку локально
+                            const actionsDiv = document.querySelector(`#event-${eventId}`);
+                            if (actionsDiv) {
+                                actionsDiv.innerHTML = `<span class="confirmed-placeholder">Ждём на ивенте!</span>`;
+                            }
+                            // Уменьшаем счётчик свободных мест (для наглядности)
+                            const eventItem = document.querySelector(`.event-item[data-event-id="${eventId}"]`);
+                            if (eventItem) {
+                                const seatsSpan = eventItem.querySelector('.event-seats');
+                                const seatsText = seatsSpan.textContent;
+                                const [free, total] = seatsText.split('/').map(Number);
+                                seatsSpan.textContent = `${free-1}/${total}`;
+                            }
                         } catch (err) {
-                            showNotification('Ошибка: ' + err.message, true);
+                            showNotification('Ошибка сети: ' + err.message, true);
                         }
-                    };
+                    });
                 });
-            }
+            });
         }
     </script>
 </body>
