@@ -61,16 +61,24 @@ func watchOverdueLoop(ctx context.Context, client *ClientZSet, cfg *configuratio
 					continue
 				}
 
+				sendTimeout := 1 * time.Second // таймаут отправки в канал
+
+				// пытаемся отправить ID в канал брокера с таймаутом
 				select {
-				case ch <- id:
-					// успешно отправили – удаляем элемент из ZSET
+
+				case <-ctx.Done(): // контекст отменен - уходим
+					return
+
+				case ch <- id: // успешно отправили - удаляем элемент из ZSET
 					if err := client.ZRem(ctx, member); err != nil {
 						log.Error("не удалось удалить элемент из ZSET", "id", id, "error", err)
 					} else {
 						log.Info("просроченная бронь отправлена и удалена из ZSET", "id", id)
 					}
-				case <-ctx.Done():
-					return
+
+				case <-time.After(sendTimeout): // таймаут отправки
+					log.Error("таймаут отправки ID в канал брокера", "id", id)
+					// не удаляем элемент - он будет обработан при следующем цикле
 				}
 			}
 		}

@@ -7,11 +7,12 @@ import (
 	"os/signal"
 	"syscall"
 
-	rabbit "github.com/IPampurin/EventBooker/pkg/broker"
+	"github.com/IPampurin/EventBooker/pkg/broker"
 	"github.com/IPampurin/EventBooker/pkg/configuration"
 	"github.com/IPampurin/EventBooker/pkg/db"
-	"github.com/IPampurin/EventBooker/pkg/redis"
 	"github.com/IPampurin/EventBooker/pkg/server"
+	"github.com/IPampurin/EventBooker/pkg/service"
+	"github.com/IPampurin/EventBooker/pkg/zSet"
 	"github.com/wb-go/wbf/logger"
 )
 
@@ -50,27 +51,23 @@ func main() {
 	}
 	defer func() { _ = db.CloseDB(storageDB) }()
 
-	// получаем экземпляр zSet, error (Redis просто реализует положить-отдать для использования методов в сервисном слое)
-	overdueCh, err := redis.InitRedis(ctx, &cfg.ZSet, appLogger)
+	// получаем экземпляр zSet и канал для передачи просроченных броней из ZSet в брокер
+	clientZSet, zSetBrokerCh, err := zSet.InitZSet(ctx, &cfg.ZSet, appLogger)
 	if err != nil {
-		appLogger.Error("ошибка инициализации Redis", "error", err)
+		appLogger.Error("ошибка инициализации ZSET", "error", err)
 		return
 	}
 
-	// получаем broker,error (структура паблишер RabbitMQ и консумер RabbitMQ)
-	broker, err := rabbit.InitMQ(ctx, &cfg.Broker, appLogger)
+	// получаем канал передачи просроченных броней из брокера в слой бизнес-логики
+	broker, err := broker.InitBroker(ctx, &cfg.Broker, zSetBrokerCh, appLogger)
 	if err != nil {
 		appLogger.Error("ошибка подключения к брокеру сообщений", "error", err)
 		return
 	}
+	defer broker.Close()
 
-	// заводим канал transferOverBookings для передачи номеров броней (из горутины получения просроченных броней из RabbitMQ в сервисный слой для отмены брони)
-
-	// получаем экземпляр слоя бизнес-логики (передаём storageDB, zSet, broker, transferOverBookings)
-
-	// запускаем горутину получения из Redis просроченных броней (передаём паблишер RabbitMQ)
-
-	// запускаем горутину получения просроченных броней из RabbitMQ (передаём консумер RabbitMQ)
+	// получаем экземпляр слоя бизнес-логики
+	service := service.InitService(ctx, storageDB, clientZSet, broker.Messages())
 
 	// запускаем сервер
 	err = server.Run(ctx, &cfg.Server, service, appLogger)
