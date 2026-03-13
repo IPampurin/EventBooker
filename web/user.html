@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Пользователь - EventBooker</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
+
 <body>
+    <div class="logo">WBoooooking</div>
     <div class="user-page">
         <h1>Страница пользователя</h1>
         <div id="userInfo"></div>
@@ -107,7 +110,7 @@
                         try {
                             const err = await response.json();
                             errorMsg = err.error || errorMsg;
-                        } catch (e) {}
+                        } catch (e) { }
                         showNotification(errorMsg, true);
                         return;
                     }
@@ -215,7 +218,6 @@
                 try {
                     const response = await fetch(`/events/${eventId}/book?user_id=${currentUserId}`);
                     if (response.status === 404) {
-                        // Брони нет — показываем кнопку "Забронировать", если есть места
                         if (freeSeats > 0) {
                             actionsDiv.innerHTML = `<button class="book-btn" data-event-id="${eventId}">Забронировать</button>`;
                         } else {
@@ -224,17 +226,13 @@
                     } else if (response.ok) {
                         const data = await response.json();
                         if (data.bookingId) {
-                            actionsDiv.innerHTML = `<button class="confirm-btn" data-event-id="${eventId}" data-booking-id="${data.bookingId}">Подтвердить</button>`;
-                        } else {
-                            // Странный случай, но обработаем
-                            if (freeSeats > 0) {
-                                actionsDiv.innerHTML = `<button class="book-btn" data-event-id="${eventId}">Забронировать</button>`;
-                            } else {
-                                actionsDiv.innerHTML = `<span>Нет мест</span>`;
+                            if (data.status === 'confirmed') {
+                                actionsDiv.innerHTML = `<span class="confirmed-placeholder">Вы уже подтвердили</span>`;
+                            } else if (data.status === 'pending') {
+                                actionsDiv.innerHTML = `<button class="confirm-btn" data-event-id="${eventId}" data-booking-id="${data.bookingId}">Подтвердить</button>`;
                             }
                         }
                     } else {
-                        // Другая ошибка (500)
                         console.error(`Ошибка проверки брони для события ${eventId}, статус ${response.status}`);
                         actionsDiv.innerHTML = `<span>Ошибка сервера</span>`;
                     }
@@ -261,12 +259,12 @@
                             try {
                                 const err = await response.json();
                                 errorMsg = err.error || errorMsg;
-                            } catch (e) {}
+                            } catch (e) { }
                             showNotification(errorMsg, true);
                             return;
                         }
                         showNotification('Место забронировано!');
-                        loadEvents(); // перезагружаем список, чтобы обновить места и кнопки
+                        loadEvents();
                     } catch (err) {
                         showNotification('Ошибка сети: ' + err.message, true);
                     }
@@ -281,7 +279,6 @@
                     currentEventId = eventId;
                     document.getElementById('confirmModal').style.display = 'block';
 
-                    // Убираем старый обработчик, чтобы не накапливались
                     const payBtn = document.getElementById('payBtn');
                     const newPayBtn = payBtn.cloneNode(true);
                     payBtn.parentNode.replaceChild(newPayBtn, payBtn);
@@ -298,24 +295,22 @@
                                 try {
                                     const err = await response.json();
                                     errorMsg = err.error || errorMsg;
-                                } catch (e) {}
+                                } catch (e) { }
                                 showNotification(errorMsg, true);
                                 return;
                             }
                             showNotification('Бронь подтверждена!');
                             document.getElementById('confirmModal').style.display = 'none';
-                            // Заменяем кнопку на заглушку локально
                             const actionsDiv = document.querySelector(`#event-${eventId}`);
                             if (actionsDiv) {
                                 actionsDiv.innerHTML = `<span class="confirmed-placeholder">Ждём на ивенте!</span>`;
                             }
-                            // Уменьшаем счётчик свободных мест (для наглядности)
                             const eventItem = document.querySelector(`.event-item[data-event-id="${eventId}"]`);
                             if (eventItem) {
                                 const seatsSpan = eventItem.querySelector('.event-seats');
                                 const seatsText = seatsSpan.textContent;
                                 const [free, total] = seatsText.split('/').map(Number);
-                                seatsSpan.textContent = `${free-1}/${total}`;
+                                seatsSpan.textContent = `${free - 1}/${total}`;
                             }
                         } catch (err) {
                             showNotification('Ошибка сети: ' + err.message, true);

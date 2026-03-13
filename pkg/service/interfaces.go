@@ -32,7 +32,7 @@ type BookerMethods interface {
 	SeatReserver(ctx context.Context, eventID, userID int, createdAt time.Time, log logger.Logger) (int, error)
 
 	// GetEventReserveOfUser - получение данных о брони пользователя на мероприятии (да, один юзер - одно место)
-	GetEventReserveOfUser(ctx context.Context, eventID, userID int, log logger.Logger) (int, error)
+	GetEventReserveOfUser(ctx context.Context, eventID, userID int, log logger.Logger) (int, string, error)
 
 	// ReserveConfirmer - метод оплаты/подтверждения бронирования
 	ReserveConfirmer(ctx context.Context, bookingID int, log logger.Logger) error

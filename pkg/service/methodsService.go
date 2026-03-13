@@ -56,7 +56,7 @@ func (s *Service) GetEventByID(ctx context.Context, id int, log logger.Logger) (
 func (s *Service) SeatReserver(ctx context.Context, eventID, userID int, createdAt time.Time, log logger.Logger) (int, error) {
 
 	// 1. Проверяем, нет ли уже у пользователя брони на это событие
-	existingBookingID, err := s.storage.GetEventReserveOfUser(ctx, eventID, userID)
+	existingBookingID, _, err := s.storage.GetEventReserveOfUser(ctx, eventID, userID)
 	if err != nil {
 		return 0, fmt.Errorf("ошибка проверки существующей брони: %w", err)
 	}
@@ -98,11 +98,11 @@ func (s *Service) SeatReserver(ctx context.Context, eventID, userID int, created
 }
 
 // GetEventReserveOfUser - получение данных о брони пользователя на мероприятии (да, один юзер - одно место)
-func (s *Service) GetEventReserveOfUser(ctx context.Context, eventID, userID int, log logger.Logger) (int, error) {
+func (s *Service) GetEventReserveOfUser(ctx context.Context, eventID, userID int, log logger.Logger) (int, string, error) {
 
-	bookingID, err := s.storage.GetEventReserveOfUser(ctx, eventID, userID)
+	bookingID, status, err := s.storage.GetEventReserveOfUser(ctx, eventID, userID)
 	if err != nil {
-		return 0, fmt.Errorf("ошибка получения брони пользователя: %w", err)
+		return 0, "", fmt.Errorf("ошибка получения брони пользователя: %w", err)
 	}
 
 	if bookingID == 0 {
@@ -111,7 +111,7 @@ func (s *Service) GetEventReserveOfUser(ctx context.Context, eventID, userID int
 		log.Info("бронь найдена", "id", bookingID)
 	}
 
-	return bookingID, nil
+	return bookingID, status, nil
 }
 
 // ReserveConfirmer - метод оплаты/подтверждения бронирования

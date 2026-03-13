@@ -34,7 +34,7 @@ type BookingTableMethods interface {
 	SeatReserver(ctx context.Context, eventID, userID int, createdAt, expiresAt time.Time) (int, error)
 
 	// GetEventReserveOfUser - получение данных о брони пользователя на мероприятии (да, один юзер - одно место)
-	GetEventReserveOfUser(ctx context.Context, eventID, userID int) (int, error)
+	GetEventReserveOfUser(ctx context.Context, eventID, userID int) (int, string, error)
 
 	// ReserveConfirmer - метод оплаты/подтверждения бронирования
 	ReserveConfirmer(ctx context.Context, bookingID int) error

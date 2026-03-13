@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <div class="logo">WBoooooking</div>
     <div class="admin-page">
         <h1>Панель администратора</h1>
         <button id="createEventBtn">Создать мероприятие</button>
@@ -73,7 +74,6 @@
 
         function renderEvents(events) {
             const container = document.getElementById('eventsContainer');
-            // Удаляем все строки, кроме заголовка
             while (container.children.length > 1) {
                 container.removeChild(container.lastChild);
             }

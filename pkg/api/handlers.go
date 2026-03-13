@@ -211,7 +211,7 @@ func GetUserBooking(svc *service.Service, log logger.Logger) gin.HandlerFunc {
 			return
 		}
 
-		bookingID, err := svc.GetEventReserveOfUser(c.Request.Context(), eventID, userID, log)
+		bookingID, status, err := svc.GetEventReserveOfUser(c.Request.Context(), eventID, userID, log)
 		if err != nil {
 			log.Error("ошибка получения брони", "event", eventID, "user", userID, "error", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "внутренняя ошибка"})
@@ -223,6 +223,9 @@ func GetUserBooking(svc *service.Service, log logger.Logger) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"bookingId": bookingID})
+		c.JSON(http.StatusOK, userBookingResponse{
+			BookingID: bookingID,
+			Status:    status,
+		})
 	}
 }

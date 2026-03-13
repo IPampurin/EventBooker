@@ -159,22 +159,23 @@ func (d *DataBase) SeatReserver(ctx context.Context, eventID, userID int, create
 }
 
 // GetEventReserveOfUser - получение данных о брони пользователя на мероприятии (0 если нет) (да, один юзер - одно место)
-func (d *DataBase) GetEventReserveOfUser(ctx context.Context, eventID, userID int) (int, error) {
+func (d *DataBase) GetEventReserveOfUser(ctx context.Context, eventID, userID int) (int, string, error) {
 
-	query := `SELECT id
+	query := `SELECT id, status
 	          FROM bookings
-			 WHERE event_id = $1 AND user_id = $2 AND status = $3`
+			 WHERE event_id = $1 AND user_id = $2 AND status IN ($3, $4)`
 
 	var id int
-	err := d.Pool.QueryRow(ctx, query, eventID, userID, domain.BookingStatusPending).Scan(&id)
+	var status string
+	err := d.Pool.QueryRow(ctx, query, eventID, userID, domain.BookingStatusPending, domain.BookingStatusConfirmed).Scan(&id, &status)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return 0, nil
+			return 0, "", nil
 		}
-		return 0, fmt.Errorf("ошибка GetEventReserveOfUser при получении id брони: %w", err)
+		return 0, "", fmt.Errorf("ошибка GetEventReserveOfUser при получении id брони: %w", err)
 	}
 
-	return id, nil
+	return id, status, nil
 }
 
 // ReserveConfirmer - подтверждение бронирования (оплата)

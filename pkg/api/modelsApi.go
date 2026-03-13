@@ -43,3 +43,9 @@ type EventResponse struct {
 	BookedSeats       int       `json:"bookedSeats"`
 	BookingPrice      int       `json:"bookingPrice"`
 }
+
+// userBookingResponse — ответ на запрос GET /events/:id/book?user_id=
+type userBookingResponse struct {
+	BookingID int    `json:"bookingId"`
+	Status    string `json:"status"`
+}
